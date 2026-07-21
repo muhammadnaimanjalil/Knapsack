@@ -313,23 +313,12 @@ On macOS or Linux, activate the environment with:
 source .venv/bin/activate
 ```
 
-## 7. Deploy on Streamlit Community Cloud
-
-1. Fork or push this repository to GitHub.
-2. In Streamlit Community Cloud, create an app from the repository.
-3. Select the deployment branch and set the entrypoint to
-   `streamlit_app.py`.
-4. Choose Python 3.12 or newer and deploy.
-
-No solver license, API key, database, or external solver executable is
-required. SciPy supplies the HiGHS-backed MILP interface used by the app.
-
-## 8. Repository structure
+## 7. Repository structure
 
 ```text
 streamlit_app.py          Streamlit user interface
 optimizer.py              validation, OLS estimation, and optimization logic
-requirements.txt          deployment dependencies
+requirements.txt          runtime dependencies
 .streamlit/config.toml    Streamlit server and theme configuration
 tests/test_optimizer.py   regression and small-instance optimizer tests
 ```

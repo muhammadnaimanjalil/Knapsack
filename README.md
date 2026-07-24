@@ -28,11 +28,12 @@ point estimates could produce a selection whose estimated volume is below 40
 liters but whose true volume has an unacceptably high probability of exceeding
 the capacity.
 
-The application therefore solves two connected problems:
-
-1. estimate each unknown item volume from the historical package data; and
-2. choose the highest-value subset whose probability of fitting in the backpack
-   is at least a user-selected confidence level, 95% by default.
+The application uses the same data to study three decision settings. Case 1
+selects a portfolio before exact volumes are observed. Case 2 makes an
+irreversible accept/reject decision after each arriving item's volume is
+revealed. Case 3 repeatedly exposes both policies to matched volume
+realizations so that their long-run value, capacity use, and overflow risk can
+be compared fairly.
 
 ### Input data
 
@@ -59,7 +60,20 @@ matrix must have full column rank. The implementation also requires more
 historical packages than items so that the regression has positive residual
 degrees of freedom.
 
-## 2. Statistical model for the missing volumes
+## 2. Case 1 — Baseline Offline Setting
+
+In the baseline setting, Ahmad must choose the complete gift portfolio before
+the true item volumes are known. Historical package measurements are used to
+estimate those volumes and their joint uncertainty. A chance-constrained
+stochastic binary knapsack model then maximizes total price while requiring the
+selected portfolio to fit within the user-specified capacity with at least the
+chosen confidence level.
+
+The decision is *offline*: once the portfolio has been selected, it remains
+fixed and cannot react to later volume realizations. This makes Case 1 a useful
+benchmark for evaluating the value of sequential information in Cases 2 and 3.
+
+### 2.1 Statistical model for the missing volumes
 
 Suppose there are $n$ items and $m$ historical packages. Define:
 
@@ -102,7 +116,7 @@ rank, and condition number as diagnostics. It rejects rank-deficient data and
 non-positive fitted physical volumes rather than silently optimizing an
 unreliable model.
 
-## 3. Chance-constrained optimization model
+### 2.2 Chance-constrained stochastic programming formulation
 
 Let
 
@@ -114,8 +128,8 @@ x_i=
 \end{cases}
 $$
 
-Let $C$ denote backpack capacity, with $C=40$ liters for the original problem.
-Let $1-\alpha$ be the required probability of fitting; the default is
+Let $C$ denote the user-specified backpack capacity. Let $1-\alpha$ be the
+required probability of fitting; the application default is
 $1-\alpha=0.95$.
 
 The stochastic binary knapsack model is
@@ -173,9 +187,9 @@ real-world effects such as compressible goods, alternative packing layouts,
 damaged items, or future measurement noise unless those effects are represented
 in the uploaded data and variance parameter.
 
-## 4. Detailed optimization approach
+### 2.3 Stochastic programming solution approach
 
-### 4.1 Why a special algorithm is required
+#### 2.3.1 Why a special algorithm is required
 
 The square-root term is a covariance norm. The resulting constraint is convex
 in the continuous relaxation but is not linear, so the model is a
@@ -190,7 +204,7 @@ The application preserves the original chance constraint through an iterative
 outer-approximation algorithm. Each subproblem is a standard MILP solved by
 HiGHS through `scipy.optimize.milp`.
 
-### 4.2 Convex constraint function
+#### 2.3.2 Convex constraint function
 
 Define
 
@@ -233,7 +247,7 @@ Every point satisfying the original chance constraint must satisfy this cut.
 The cut is therefore a valid relaxation: it removes the violated candidate
 $\bar x$ without removing any chance-feasible binary selection.
 
-### 4.3 Algorithm
+#### 2.3.3 Outer-approximation algorithm
 
 The implementation performs the following steps:
 
@@ -254,7 +268,7 @@ The implementation performs the following steps:
 6. **Repeat** until a globally optimal chance-feasible selection is found or a
    configured time or cut limit is reached.
 
-### 4.4 Why the returned solution is globally optimal
+#### 2.3.4 Why the returned solution is globally optimal
 
 At every iteration, the MILP feasible region contains every feasible solution
 of the original chance-constrained problem. Its optimal objective value is
@@ -272,7 +286,7 @@ terminates after finitely many distinct candidates. The implementation also
 detects repeated candidates and enforces time and cut limits to handle numerical
 or pathological cases safely.
 
-### 4.5 Solver diagnostics
+#### 2.3.5 Solver diagnostics
 
 The downloaded result records:
 
@@ -286,15 +300,28 @@ The downloaded result records:
 - explored MIP nodes, final MIP gap, and runtime; and
 - all model parameters needed to interpret the result.
 
-## 5. Sequential online bid-price policy
+## 3. Case 2 — Online Setting
 
-Case 2 changes the timing of information and decisions. Every item arrives once
-in a random order. Before arrival its volume is uncertain; when it arrives, its
-exact volume is observed. The accept/reject decision is immediate and
-irreversible.
+Case 2 changes the timing of both information and decisions. Every item arrives
+once in a random order. Before an item arrives, its volume is known only through
+the probability model estimated from package history. At arrival, its exact
+volume is revealed and Ahmad must immediately accept or reject it. An accepted
+item consumes its realized volume, while a rejected item cannot be reconsidered.
 
-At a decision epoch with remaining capacity \(b_t\), the application solves the
-deterministic fractional-knapsack LP for the items that have not yet arrived:
+The online policy balances the value of the current item against the opportunity
+cost of using capacity that may be more valuable for future arrivals. It does so
+with an approximate dynamic programming value function derived from a
+deterministic linear-programming relaxation.
+
+### 3.1 Approximate dynamic programming approach
+
+Let \(b_t\) be the exactly known remaining capacity immediately before the
+decision at epoch \(t\), and let \(\mathcal R_t\) contain the items that have not
+yet arrived. The true dynamic-programming value function is difficult to
+compute because its state must account for remaining capacity, unobserved
+volumes, and the set of future items. The application approximates the future
+value of capacity by solving the following deterministic fractional-knapsack
+LP for the items that have not yet arrived:
 
 $$
 \begin{aligned}
@@ -309,6 +336,8 @@ Because this LP has one capacity resource, sorting the future items by
 \(p_j/\widehat v_j\) solves it exactly. The density of the marginal fractional
 item is the capacity bid price \(\lambda_t\), an approximation of the marginal
 future value of one liter.
+
+### 3.2 Bid-price acceptance rule
 
 For an arriving item \(i\) with realized volume \(V_i\), the approximate
 marginal value is
@@ -326,9 +355,12 @@ V_i\le b_t
 $$
 
 After an acceptance, remaining capacity is updated using the exact realized
-volume. The DLP is then re-solved for the next arrival. Each scenario records
+volume. The DLP approximation is then re-solved for the next arrival, producing
+a state-dependent bid price. Each scenario records
 the arrival order, expected and realized volumes, bid prices, opportunity
 costs, marginal values, decisions, remaining capacity, and cumulative value.
+
+### 3.3 Correlated volume realization
 
 Volume vectors are drawn jointly from
 
@@ -340,10 +372,20 @@ Draws containing a non-positive physical volume are rejected and resampled.
 This retains the correlation implied by the package regression while enforcing
 positive item volumes.
 
-## 6. Paired policy simulation
+## 4. Case 3 — Simulation Comparison
 
-Case 3 uses common random numbers to compare the policies fairly. On every
-Monte Carlo run, both policies receive the same joint volume realization:
+Case 3 estimates how the fixed offline portfolio and the adaptive online policy
+perform over many possible futures. It first solves Case 1 once. Each Monte
+Carlo run then generates a correlated vector of exact item volumes and a random
+arrival order for Case 2. Increasing the run count reduces Monte Carlo noise at
+the cost of additional computation.
+
+### 4.1 Paired simulation approach
+
+The comparison uses common random numbers: on every run, both policies receive
+the same joint volume realization. Pairing the scenarios removes avoidable
+sampling variation and makes differences between the policies easier to
+attribute to their decision rules:
 
 - Case 1 evaluates its fixed chance-constrained portfolio. Its value is retained
   even if realized volume exceeds capacity; infeasibility is measured separately.
@@ -351,7 +393,14 @@ Monte Carlo run, both policies receive the same joint volume realization:
   policy. It rejects any item that cannot fit, so it never intentionally
   overflows.
 
-The simulation reports, side by side:
+Case 1's portfolio is not repaired after a realization. If its realized volume
+exceeds capacity, the run retains the portfolio's value and separately records
+its overflow. Case 2 updates capacity after every acceptance and rejects any
+item that does not fit, so it does not intentionally exceed capacity.
+
+### 4.2 Comparative statistics
+
+The simulation reports the following statistics side by side:
 
 - long-run average total value (and total item cost);
 - value standard deviation, percentiles, and a 95% confidence interval;
@@ -362,7 +411,7 @@ The simulation reports, side by side:
 
 Run-level paired results and the complete comparison can be downloaded as JSON.
 
-## 7. Application features
+## 5. Application features
 
 - Upload `items.json` and `packages.json` directly in the browser.
 - Validate schemas, duplicate names, package references, regression rank, and
@@ -373,7 +422,7 @@ Run-level paired results and the complete comparison can be downloaded as JSON.
 - Display selected gifts, online decisions, risk measures, and paired statistics.
 - Download each case's complete result as a JSON file.
 
-## 8. Run locally
+## 6. Run locally
 
 Use Python 3.12 or newer:
 
@@ -390,7 +439,7 @@ On macOS or Linux, activate the environment with:
 source .venv/bin/activate
 ```
 
-## 9. Repository structure
+## 7. Repository structure
 
 ```text
 streamlit_app.py          Streamlit user interface

@@ -459,10 +459,12 @@ case_1_tab, case_2_tab, case_3_tab = st.tabs(
 with case_1_tab:
     st.markdown(
         """
-        **Baseline stochastic-programming case.** Item volumes are estimated from
-        package history, and a fixed binary portfolio is selected before any exact
-        volumes are observed. A Gaussian chance constraint adds a confidence buffer
-        to protect the 40-liter capacity.
+        **Baseline offline setting.** Ahmad selects the complete gift portfolio
+        before any item's exact volume is known, so the decision cannot adapt to
+        later realizations. Historical package measurements estimate the item
+        volumes and their covariance, and a Gaussian chance-constrained binary
+        knapsack model uses HiGHS outer approximation to maximize total value while
+        meeting the selected probability of fitting within capacity.
         """
     )
     settings = st.columns(4)
@@ -491,6 +493,20 @@ with case_1_tab:
         value=60,
         step=5,
         key="case_1_time_limit",
+    )
+    st.markdown(
+        """
+        **Control guide**
+
+        - **Capacity (L):** total knapsack volume available to the selected portfolio.
+        - **Minimum fit confidence:** required model-implied probability that the
+          portfolio's uncertain total volume does not exceed capacity; a higher
+          value creates a larger safety buffer.
+        - **Measurement-error variance:** assumed variance of the historical package
+          measurements used to calculate uncertainty in the estimated item volumes.
+        - **Time limit (seconds):** maximum solver time allowed for the iterative
+          HiGHS outer-approximation procedure.
+        """
     )
     run_case_1 = st.button(
         "Solve Case 1",
@@ -528,11 +544,13 @@ with case_1_tab:
 with case_2_tab:
     st.markdown(
         """
-        **One sequential scenario.** Every item arrives once in random order. Its
-        exact volume is revealed on arrival, and the decision is irreversible.
-        Before each decision, a deterministic fractional-knapsack LP estimates the
-        marginal value of remaining capacity. The item is accepted when it fits and
-        its value exceeds the bid-price opportunity cost.
+        **Online setting with sequential arrivals.** Items arrive one at a time in a
+        sampled order, and each exact volume becomes known only at arrival. Every
+        accept/reject decision is immediate and irreversible. Before each decision,
+        an approximate dynamic programming policy re-solves a deterministic
+        fractional-knapsack LP; its capacity bid price estimates the opportunity
+        cost of using space, so an item is accepted only when it fits and its value
+        covers that cost.
         """
     )
     settings = st.columns(3)
@@ -553,6 +571,18 @@ with case_2_tab:
         value=2026,
         step=1,
         key="case_2_seed",
+    )
+    st.markdown(
+        """
+        **Control guide**
+
+        - **Capacity (L):** initial knapsack volume; accepted items consume their
+          exact realized volume from this amount.
+        - **Volume-realization variance:** scale of uncertainty used when jointly
+          sampling the items' exact volumes from the estimated covariance model.
+        - **Random seed:** reproduces the same joint volume realization and arrival
+          order when the inputs and other controls are unchanged.
+        """
     )
     run_case_2 = st.button(
         "Realize arrivals and solve Case 2",
@@ -589,11 +619,12 @@ with case_2_tab:
 with case_3_tab:
     st.markdown(
         """
-        **Paired Monte Carlo simulation.** Each run generates one joint volume
-        realization. The fixed Case 1 portfolio and the Case 2 online policy are
-        evaluated on that same realization. Case 1 may overflow; Case 2 rejects any
-        item that does not fit. Common random numbers make the comparison more
-        precise.
+        **Simulation comparison.** This case estimates long-run performance by
+        evaluating the fixed Case 1 portfolio and the adaptive Case 2 policy over
+        many possible volume realizations. Both policies receive the same correlated
+        volumes in each run, which enables a paired comparison of value, utilization,
+        fit probability, and overflow. Case 1 keeps its preselected portfolio even
+        when it overflows, whereas Case 2 rejects arrivals that cannot fit.
         """
     )
     first_row = st.columns(3)
@@ -639,6 +670,23 @@ with case_3_tab:
         value=60,
         step=5,
         key="case_3_time_limit",
+    )
+    st.markdown(
+        """
+        **Control guide**
+
+        - **Capacity (L):** common knapsack capacity used to evaluate both policies.
+        - **Case 1 fit confidence:** reliability target used when selecting the fixed
+          baseline portfolio before the simulations begin.
+        - **Volume-realization variance:** uncertainty scale used to generate the
+          correlated exact volumes shared by both policies in every run.
+        - **Simulation runs:** number of paired Monte Carlo scenarios; more runs
+          generally improve statistical precision but require more computation.
+        - **Random seed:** reproduces the same sequence of paired volume realizations
+          and online arrival orders.
+        - **Case 1 time limit (seconds):** maximum time allowed to solve the baseline
+          chance-constrained portfolio before it is evaluated in all runs.
+        """
     )
     run_case_3 = st.button(
         "Run paired simulation",

@@ -286,17 +286,94 @@ The downloaded result records:
 - explored MIP nodes, final MIP gap, and runtime; and
 - all model parameters needed to interpret the result.
 
-## 5. Application features
+## 5. Sequential online bid-price policy
+
+Case 2 changes the timing of information and decisions. Every item arrives once
+in a random order. Before arrival its volume is uncertain; when it arrives, its
+exact volume is observed. The accept/reject decision is immediate and
+irreversible.
+
+At a decision epoch with remaining capacity \(b_t\), the application solves the
+deterministic fractional-knapsack LP for the items that have not yet arrived:
+
+$$
+\begin{aligned}
+\max_y\quad & \sum_{j\in\mathcal R_t}p_jy_j\\
+\text{subject to}\quad
+& \sum_{j\in\mathcal R_t}\widehat v_jy_j\le b_t,\\
+&0\le y_j\le1.
+\end{aligned}
+$$
+
+Because this LP has one capacity resource, sorting the future items by
+\(p_j/\widehat v_j\) solves it exactly. The density of the marginal fractional
+item is the capacity bid price \(\lambda_t\), an approximation of the marginal
+future value of one liter.
+
+For an arriving item \(i\) with realized volume \(V_i\), the approximate
+marginal value is
+
+$$
+\Delta_{it}=p_i-\lambda_tV_i.
+$$
+
+The item is accepted exactly when it fits and has nonnegative marginal value:
+
+$$
+V_i\le b_t
+\quad\text{and}\quad
+\Delta_{it}\ge0.
+$$
+
+After an acceptance, remaining capacity is updated using the exact realized
+volume. The DLP is then re-solved for the next arrival. Each scenario records
+the arrival order, expected and realized volumes, bid prices, opportunity
+costs, marginal values, decisions, remaining capacity, and cumulative value.
+
+Volume vectors are drawn jointly from
+
+$$
+V\sim\mathcal N\left(\widehat v,\sigma^2(A^\top A)^{-1}\right).
+$$
+
+Draws containing a non-positive physical volume are rejected and resampled.
+This retains the correlation implied by the package regression while enforcing
+positive item volumes.
+
+## 6. Paired policy simulation
+
+Case 3 uses common random numbers to compare the policies fairly. On every
+Monte Carlo run, both policies receive the same joint volume realization:
+
+- Case 1 evaluates its fixed chance-constrained portfolio. Its value is retained
+  even if realized volume exceeds capacity; infeasibility is measured separately.
+- Case 2 receives a random arrival order and applies the sequential bid-price
+  policy. It rejects any item that cannot fit, so it never intentionally
+  overflows.
+
+The simulation reports, side by side:
+
+- long-run average total value (and total item cost);
+- value standard deviation, percentiles, and a 95% confidence interval;
+- average used volume and capacity utilization;
+- average overflow volume;
+- probability of fitting and probability of overflow; and
+- average number of selected or accepted items.
+
+Run-level paired results and the complete comparison can be downloaded as JSON.
+
+## 7. Application features
 
 - Upload `items.json` and `packages.json` directly in the browser.
 - Validate schemas, duplicate names, package references, regression rank, and
   fitted physical volumes.
-- Configure capacity, confidence, known noise variance, and solve time limit.
+- Navigate between baseline, sequential-scenario, and simulation tabs.
+- Configure capacity, confidence, variance, random seeds, and simulation runs.
 - Solve without Gurobi or a commercial solver license.
-- Display selected gifts, estimated volumes, risk metrics, and diagnostics.
-- Download the complete optimization result as a JSON file.
+- Display selected gifts, online decisions, risk measures, and paired statistics.
+- Download each case's complete result as a JSON file.
 
-## 6. Run locally
+## 8. Run locally
 
 Use Python 3.12 or newer:
 
@@ -313,12 +390,14 @@ On macOS or Linux, activate the environment with:
 source .venv/bin/activate
 ```
 
-## 7. Repository structure
+## 9. Repository structure
 
 ```text
 streamlit_app.py          Streamlit user interface
 optimizer.py              validation, OLS estimation, and optimization logic
+online_policy.py          online bid-price policy and paired simulation
 requirements.txt          runtime dependencies
 .streamlit/config.toml    Streamlit server and theme configuration
 tests/test_optimizer.py   regression and small-instance optimizer tests
+tests/test_online_policy.py online-policy and simulation tests
 ```

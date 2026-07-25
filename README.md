@@ -1,13 +1,15 @@
-# Zalando Gift Portfolio Optimizer
+# Stochastic Knapsack: A Comparison of Offline and Online Configurations
 
-A Gurobi-free Streamlit application for solving Zalando's Gift Problem with a
-Gaussian chance constraint and the open-source HiGHS mixed-integer optimizer.
+A Gurobi-free Streamlit application for comparing offline stochastic
+optimization with online bid-price control under uncertain item volumes. The
+application uses a Gaussian chance constraint and the open-source HiGHS
+mixed-integer optimizer.
 
 ## 1. Problem description
 
 Sergey's birthday is approaching, and Ahmad wants to fill his backpack with the
-most valuable collection of gifts from the Zalando website. Each available item
-has a known price, but the backpack can carry at most **40 liters**.
+most valuable collection of available gifts. Each item has a known price, but
+the backpack can carry at most **40 liters**.
 
 This would normally be a binary knapsack problem: select the combination of
 items with maximum total price while keeping total volume within the backpack's
@@ -54,6 +56,12 @@ be compared fairly.
   {"total_volume": 22.15, "items": ["A1"]}
 ]
 ```
+
+The complete sample dataset used as the repository's test scenario is available
+on GitHub in [`tests/Test Scenario`](tests/Test%20Scenario). It contains both
+[`items.json`](tests/Test%20Scenario/items.json) and
+[`packages.json`](tests/Test%20Scenario/packages.json), which can be downloaded
+or uploaded directly into the application to reproduce the scenario.
 
 For the individual volumes to be identifiable, the package-item incidence
 matrix must have full column rank. The implementation also requires more
@@ -449,4 +457,5 @@ requirements.txt          runtime dependencies
 .streamlit/config.toml    Streamlit server and theme configuration
 tests/test_optimizer.py   regression and small-instance optimizer tests
 tests/test_online_policy.py online-policy and simulation tests
+tests/Test Scenario/      sample items.json and packages.json input dataset
 ```

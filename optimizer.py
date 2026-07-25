@@ -1,4 +1,4 @@
-"""Statistical estimation and HiGHS optimization for Zalando's gift problem."""
+"""Statistical estimation and HiGHS optimization for the stochastic knapsack."""
 
 from __future__ import annotations
 

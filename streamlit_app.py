@@ -23,7 +23,7 @@ from optimizer import (
 
 
 st.set_page_config(
-    page_title="Gift Portfolio Decision Lab",
+    page_title="Stochastic Knapsack: A Comparison of Offline and Online Configurations",
     page_icon="🎁",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -60,7 +60,7 @@ st.markdown(
       }
     </style>
     <div class="hero">
-      <h1>Gift Portfolio Decision Lab</h1>
+      <h1>Stochastic Knapsack: A Comparison of Offline and Online Configurations</h1>
       <p>Compare a chance-constrained portfolio with sequential bid-price control under uncertain item volumes.</p>
     </div>
     """,

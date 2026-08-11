@@ -80,7 +80,9 @@ chosen confidence level.
 
 The decision is *offline*: once the portfolio has been selected, it remains
 fixed and cannot react to later volume realizations. This makes Case 1 a useful
-benchmark for evaluating the value of sequential information in Cases 2 and 3.
+benchmark for evaluating the value of sequential information in Case 2. Case 3 serves as 
+a simulation framework to compare performance of approaches identified in Case 1 
+(Offline Stochastic Optimization Control) and Case 2 (Online Bid Price Control).
 
 ### 2.1 Statistical model for the missing volumes
 
@@ -110,8 +112,8 @@ $$
 Under the Gaussian measurement model, the estimator has covariance
 
 $$
-\sigma
-=\operatorname{Cov}(\widehat v)
+\Sigma
+=\mathrm{Cov}(\widehat v)
 =\sigma^2(A^\top A)^{-1}.
 $$
 

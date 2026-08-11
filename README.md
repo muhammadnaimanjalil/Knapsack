@@ -1,15 +1,16 @@
 # Stochastic Knapsack: A Comparison of Offline and Online Configurations
 
-A Gurobi-free Streamlit application for comparing offline stochastic
-optimization with online bid-price control under uncertain item volumes. The
-application uses a Gaussian chance constraint and the open-source HiGHS
+A Streamlit application [Knapsack](https://knapsack-vtgykxfxrz9veseuie8myr.streamlit.app/)
+for comparing offline stochastic optimization control and online bid-price control approaches 
+for solving Knapsack problem with certain cost/profit parameters and  uncertain item volumes. 
+The application uses a Gaussian chance constraint and the open-source HiGHS
 mixed-integer optimizer.
 
 ## 1. Problem description
 
 Sergey's birthday is approaching, and Ahmad wants to fill his backpack with the
 most valuable collection of available gifts. Each item has a known price, but
-the backpack can carry at most **40 liters**.
+the backpack capacity has an upperbound.
 
 This would normally be a binary knapsack problem: select the combination of
 items with maximum total price while keeping total volume within the backpack's
@@ -109,7 +110,7 @@ $$
 Under the Gaussian measurement model, the estimator has covariance
 
 $$
-\Sigma
+\sigma
 =\operatorname{Cov}(\widehat v)
 =\sigma^2(A^\top A)^{-1}.
 $$

@@ -413,7 +413,7 @@ item that does not fit, so it does not intentionally exceed capacity.
 
 The simulation reports the following statistics side by side:
 
-- long-run average total value (and total item cost);
+- long-run average total value;
 - value standard deviation, percentiles, and a 95% confidence interval;
 - average used volume and capacity utilization;
 - average overflow volume;
@@ -424,16 +424,36 @@ Run-level paired results and the complete comparison can be downloaded as JSON.
 
 ## 5. Application features
 
-- Upload `items.json` and `packages.json` directly in the browser.
+- Load the included example scenario or upload `items.json` and `packages.json`.
 - Validate schemas, duplicate names, package references, regression rank, and
   fitted physical volumes.
-- Navigate between baseline, sequential-scenario, and simulation tabs.
-- Configure capacity, confidence, variance, random seeds, and simulation runs.
+- Navigate between clearly labeled offline, online, and comparison tabs.
+- Begin with essential controls and reveal advanced settings only when needed.
 - Solve without Gurobi or a commercial solver license.
-- Display selected gifts, online decisions, risk measures, and paired statistics.
+- Display concise headline results before detailed decisions and diagnostics.
 - Download each case's complete result as a JSON file.
 
-## 6. Run locally
+## 6. Architecture
+
+The implementation follows a one-way layered design:
+
+```text
+Streamlit presentation
+        ↓
+Application case services
+        ↓
+Offline optimization / online policy / simulation
+        ↓
+Estimation, validation, and typed domain models
+```
+
+File loading and schema validation are shared by all cases. Item-volume
+estimation is performed once, the paired simulation calls the same offline
+optimizer and online bid-price engine used by Cases 1 and 2, and no calculation
+module imports Streamlit. Typed configuration and result dataclasses define the
+interfaces between layers.
+
+## 7. Run locally
 
 Use Python 3.12 or newer:
 
@@ -450,15 +470,30 @@ On macOS or Linux, activate the environment with:
 source .venv/bin/activate
 ```
 
-## 7. Repository structure
+Run the automated tests with:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+## 8. Repository structure
 
 ```text
-streamlit_app.py          Streamlit user interface
-optimizer.py              validation, OLS estimation, and optimization logic
-online_policy.py          online bid-price policy and paired simulation
-requirements.txt          runtime dependencies
-.streamlit/config.toml    Streamlit server and theme configuration
-tests/test_optimizer.py   regression and small-instance optimizer tests
-tests/test_online_policy.py online-policy and simulation tests
-tests/Test Scenario/      sample items.json and packages.json input dataset
+streamlit_app.py                       thin Streamlit Cloud entry point
+stochastic_knapsack/domain/            typed models, configurations, and results
+stochastic_knapsack/data/              JSON loading and shared validation
+stochastic_knapsack/estimation/        OLS volume estimation and covariance
+stochastic_knapsack/optimization/      offline optimizer and deterministic LP
+stochastic_knapsack/policies/          volume sampling and online bid-price policy
+stochastic_knapsack/simulation/        paired comparison and statistics
+stochastic_knapsack/application/       Case 1, Case 2, and Case 3 orchestration
+stochastic_knapsack/presentation/      Streamlit views and reusable components
+optimizer.py / online_policy.py        compatibility import facades
+requirements.txt                       runtime dependencies
+requirements-dev.txt                   local test dependencies
+.streamlit/config.toml                 Streamlit server and theme configuration
+tests/unit/                             focused component tests
+tests/integration/                      end-to-end case and interface tests
+tests/Test Scenario/                   sample items.json and packages.json dataset
 ```
